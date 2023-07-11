@@ -9,7 +9,8 @@ from datetime import datetime
 
 import websockets
 
-PORT = 9090
+WS_HOST = "localhost"
+WS_PORT = 9090
 DEBUG = False
 
 
@@ -34,7 +35,7 @@ class WebSocketThread:
     def server(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        ws_server = websockets.serve(self.listen, "localhost", PORT)  # type: ignore
+        ws_server = websockets.serve(self.listen, WS_HOST, WS_PORT)  # type: ignore
         loop.run_until_complete(ws_server)
         loop.run_forever()
         loop.close()
