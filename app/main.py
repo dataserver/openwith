@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import os
 import sys
 import threading
 import tkinter as tk
@@ -11,6 +10,7 @@ from datetime import datetime
 import websockets
 
 PORT = 9090
+DEBUG = False
 
 
 def is_json(myjson) -> bool:
@@ -21,26 +21,25 @@ def is_json(myjson) -> bool:
     return True
 
 
-class WebSocketThread(threading.Thread):
+class WebSocketThread:
     def __init__(self, name) -> None:
-        threading.Thread.__init__(self)
-        self.stop_event = threading.Event()
         self.name = name
         self.USERS = set()
         print("Started:", self.name)
 
-    def run(self) -> None:
-        self.loop = asyncio.new_event_loop()
-        stop = self.loop.run_in_executor(None, self.stop_event.wait)
-        self.loop.run_until_complete(self.listener_server(stop))  # type: ignore
-        self.loop.run_forever()
+    def start(self):
+        server = threading.Thread(target=self.server, daemon=True)
+        server.start()
 
-    async def listener_server(self, stop) -> None:
-        async with websockets.serve(self.listen, "localhost", PORT):  # type: ignore
-            await stop
-        self.loop.stop()
+    def server(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        ws_server = websockets.serve(self.listen, "localhost", PORT)  # type: ignore
+        loop.run_until_complete(ws_server)
+        loop.run_forever()
+        loop.close()
 
-    async def listen(self, websocket, path) -> None:
+    async def listen(self, websocket) -> None:
         self.USERS.add(websocket)
         # this loop to get message from client #
         while True:
@@ -53,7 +52,8 @@ class WebSocketThread(threading.Thread):
             except websockets.exceptions.ConnectionClosed:  # type: ignore
                 ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
                 app.append_text(f"{ts} - closed - {websocket}")
-                # print(f"close: {ts}", websocket)
+                if DEBUG:
+                    print(f"close: {ts}", websocket)
                 break
 
         self.USERS.remove(websocket)
@@ -61,34 +61,28 @@ class WebSocketThread(threading.Thread):
     # message handler
     async def handle_message(self, websocket, data) -> None:
         ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+        if DEBUG:
+            print(f"websocket: {websocket}")
+            print(f"data: {data}")
+
         if is_json(data):
             json_data = json.loads(data)
-            # print("json data:", json_data)
-            if json_data["data"]["type"] == "browser":
+            if json_data["data"]["category"] == "cat-a":
                 url = json_data["data"]["url"]
-                if json_data["data"]["app"] == "browser-chrome":
-                    cmd = "start chrome --new-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-chrome-incognito":
-                    cmd = "start chrome --incognito {}".format(url)
-                elif json_data["data"]["app"] == "browser-firefox":
-                    cmd = "start firefox --new-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-firefox-incognito":
-                    cmd = "start firefox --private-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-edge":
-                    cmd = "start msedge --new-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-edge-incognito":
-                    cmd = "start msedge --inprivate {}".format(url)
+                if json_data["data"]["action"] == "action-a":
+                    action = "some action A"
+                elif json_data["data"]["action"] == "action-b":
+                    action = "some action B"
                 else:
-                    cmd = None
-                if cmd:
-                    app.append_text(f"{ts} - {cmd}")
-                    os.system(cmd)
+                    action = None
+                app.append_text(f"{ts} - {action}")
+
+            elif json_data["data"]["category"] == "cat-a":
+                pass
+            else:
+                pass
         else:
             app.append_text(f"{ts} - {data}")
-
-    def stop_server(self) -> None:
-        self.stop_event.set()
-        app.append_text("stop_server()")
 
 
 class App(tk.Tk):
@@ -113,12 +107,12 @@ class App(tk.Tk):
         self.textbox.insert(tk.END, "\n" + txt)
 
     def on_window_delete(self) -> None:
-        threadWebSocket.stop_server()
+        app.append_text("Terminate")
         self.destroy()
         sys.exit()
 
     def close_window(self) -> None:
-        threadWebSocket.stop_server()
+        app.append_text("Terminate")
         self.destroy()
         sys.exit()
 
