@@ -85,14 +85,14 @@ function menu_on_error(error) {
 function menu_check_uncheck_update(checkedState) {
     if (checkedState) {
         browser.menus.update("check-uncheck", {
-            title: "websocket ON",
+            title: "Connected to server",
             checked: true,
         });
         ws_conn_init();
         submenu_create();
     } else {
         browser.menus.update("check-uncheck", {
-            title: "websocket Off",
+            title: "Connect to server",
             checked: false,
         });
         if (socket_conn != null) {
@@ -210,7 +210,7 @@ browser.menus.create({
     id: "check-uncheck",
     type: "checkbox",
     documentUrlPatterns: PATTERN_VALID_URLS,
-    title: "websocket off",
+    title: "Connect to server",
     contexts: ["all"],
     checked: false,
 }, menu_on_created);

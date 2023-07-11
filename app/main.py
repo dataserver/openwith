@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import sys
 import threading
 import tkinter as tk
 from datetime import datetime
@@ -86,8 +87,8 @@ class WebSocketThread(threading.Thread):
             app.append_text(f"{ts} - {data}")
 
     def stop_server(self) -> None:
-        app.append_text("stop_server()")
         self.stop_event.set()
+        app.append_text("stop_server()")
 
 
 class App(tk.Tk):
@@ -114,10 +115,12 @@ class App(tk.Tk):
     def on_window_delete(self) -> None:
         threadWebSocket.stop_server()
         self.destroy()
+        sys.exit()
 
     def close_window(self) -> None:
         threadWebSocket.stop_server()
         self.destroy()
+        sys.exit()
 
 
 if __name__ == "__main__":
