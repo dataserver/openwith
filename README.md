@@ -35,6 +35,8 @@ In the server side only windows command lines are coded.
 The websocket server written in Python and can easily be converted to executable using Pyinstaller
     
     pyinstaller main.spec
+    or
+    pyinstaller pyside.spec
 
 ## License ##
 
