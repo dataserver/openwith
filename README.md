@@ -15,9 +15,15 @@ The extensino send the url info using a websocket connection to an app runnig in
 - Microsoft Edge
 - Microsoft Edge - InPrivate mode
 
+## TKinter & PySide6
+
+There are two example of websocket server using different GUI libraries:
+- main.py (Tkinter)
+- pyside.py (PySide6)
+
 ## Only for Windows
 
-In the main.py file only windows command lines are coded.
+In the server side only windows command lines are coded.
 
 ## HOW TO USE
 
