@@ -9,7 +9,7 @@ var socket_conn = null;
 var debug = IS_DEBUG ? console.log.bind(window.console) : function () { };
 // =============================================================================
 /**
- * Return browser user agent in lowercase
+ * Return browser user agent
  */
 function get_user_agent() {
     if ((navigator.userAgent.indexOf("Opera") || navigator.userAgent.indexOf("OPR")) != -1) {
