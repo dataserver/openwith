@@ -1,12 +1,18 @@
 // background.js
-// =================================================
+// =============================================================================
 const PATTERN_VALID_URLS = ["http://*/*", "https://*/*"];
 const USER_AGENT = get_user_agent();
+const WS_SERVER_URL = "ws://localhost:9090";
+const IS_DEBUG = false;
 
 var socket_conn = null;
-
+var debug = IS_DEBUG ? console.log.bind(window.console) : function () { };
+// =============================================================================
+/**
+ * Return browser user agent in lowercase
+ */
 function get_user_agent() {
-    if ((navigator.userAgent.indexOf("Opera") || navigator.userAgent.indexOf('OPR')) != -1) {
+    if ((navigator.userAgent.indexOf("Opera") || navigator.userAgent.indexOf("OPR")) != -1) {
         return "opera";
     }
     else if (navigator.userAgent.indexOf("Edg") != -1) {
@@ -29,31 +35,42 @@ function get_user_agent() {
     }
 }
 
-// WEBSOCKET
+/**
+ * Init websocket connection to server
+ */
 function ws_conn_init() {
-    if (socket_conn == null) {
-        // console.log("ws: init");
-        socket_conn = new WebSocket('ws://localhost:9090');
-        socket_conn.addEventListener('open', function (event) {
+    if (socket_conn === null) {
+        debug("ws: init");
+        socket_conn = new WebSocket(WS_SERVER_URL);
+        socket_conn.addEventListener("open", function (event) {
+            debug("ws: opened");
             socket_conn.send("browser: init hello");
         });
-        socket_conn.addEventListener('message', function (event) {
-            // console.log("server:", event.data);
+        socket_conn.addEventListener("message", function (event) {
+            debug("ws message:", event.data);
         });
-        socket_conn.addEventListener('close', function (event) {
-            // console.log("ws: closed");
-            menu_check_uncheck_update(false)
+        socket_conn.addEventListener("close", function (event) {
+            debug("ws: closed");
+            menu_check_uncheck_update(false);
+            submenu_remove();
             socket_conn = null;
         });
     }
 }
 
+/**
+ * Close connection to websocket server and reset variable
+ */
 function ws_conn_close() {
     if (socket_conn != null) {
         socket_conn.close();
     }
 }
 
+/**
+ * Send message to websocket server as json string
+ * @param {object|} data object to attach to data property before converstion to json format.
+ */
 async function ws_message_send(data) {
     let payload = {
         "apiVersion": "1.0",
@@ -65,23 +82,35 @@ async function ws_message_send(data) {
 }
 
 
-// ContextMenu
+/**
+ * callback on menu item creation
+ */
 function menu_on_created() {
     if (browser.runtime.lastError) {
-        // console.log(`Error: ${browser.runtime.lastError}`);
+        debug(`Error: ${browser.runtime.lastError}`);
     } else {
-        // console.log("menu Item : created successfully");
+        debug("menu Item : created successfully");
     }
 }
 
+/**
+ * callback on menu item remove
+ */
 function menu_on_removed() {
-    // console.log("Item removed successfully");
+    debug("Item removed successfully");
 }
 
+/**
+ * callback on menu item creation error
+ * @param {str} error message
+ */
 function menu_on_error(error) {
-    // console.log(`Error: ${error}`);
+    debug(`Error: ${error}`);
 }
-
+/**
+ * Toogle the check mark for context menu
+ * @checkedState {bool} True as connected.
+ */
 function menu_check_uncheck_update(checkedState) {
     if (checkedState) {
         browser.menus.update("check-uncheck", {
@@ -95,14 +124,15 @@ function menu_check_uncheck_update(checkedState) {
             title: "Connect to server",
             checked: false,
         });
-        if (socket_conn != null) {
+        if (socket_conn !== null) {
             socket_conn.close();
         }
-        socket_conn = null;
-        submenu_remove();
     }
 }
 
+/**
+ * Remove submenu options from context menu
+ */
 function submenu_remove() {
     if (USER_AGENT != "firefox") {
         browser.menus.remove("browser-firefox");
@@ -120,6 +150,9 @@ function submenu_remove() {
     }
 }
 
+/**
+ * Create submenu options from context menu
+ */
 function submenu_create() {
     if (USER_AGENT != "firefox") {
         browser.menus.create({
@@ -205,52 +238,56 @@ function submenu_create() {
 }
 
 
-// =================================================
-browser.menus.create({
-    id: "check-uncheck",
-    type: "checkbox",
-    documentUrlPatterns: PATTERN_VALID_URLS,
-    title: "Connect to server",
-    contexts: ["all"],
-    checked: false,
-}, menu_on_created);
-browser.menus.create({
-    id: "separator-1",
-    type: "separator",
-    documentUrlPatterns: PATTERN_VALID_URLS,
-    contexts: ["all"]
-}, menu_on_created);
+// =============================================================================
+function main() {
+    browser.menus.create({
+        id: "check-uncheck",
+        type: "checkbox",
+        documentUrlPatterns: PATTERN_VALID_URLS,
+        title: "Connect to server",
+        contexts: ["all"],
+        checked: false,
+    }, menu_on_created);
+    browser.menus.create({
+        id: "separator-1",
+        type: "separator",
+        documentUrlPatterns: PATTERN_VALID_URLS,
+        contexts: ["all"]
+    }, menu_on_created);
 
-browser.menus.onClicked.addListener((info, tab) => {
-    // console.log("info", info);
-    let data = null
-    const dt = new Date();
-    const padL = (nr, len = 2, chr = `0`) => `${nr}`.padStart(2, chr);
-    // console.log(`${dt.getFullYear()} ${padL(dt.getMonth() + 1)}/${padL(dt.getDate())}/${padL(dt.getHours())}:${padL(dt.getMinutes())}:${padL(dt.getSeconds())}`);
-    switch (info.menuItemId) {
-        case "check-uncheck":
-            menu_check_uncheck_update(info.checked);
-            break;
-        case "browser-firefox":
-        case "browser-firefox-incognito":
-        case "browser-chrome":
-        case "browser-chrome-incognito":
-        case "browser-edge":
-        case "browser-edge-incognito":
-            data = {
-                "date": `${dt.getFullYear()}-${padL(dt.getMonth() + 1)}-${padL(dt.getDate())} ${padL(dt.getHours())}:${padL(dt.getMinutes())}:${padL(dt.getSeconds())}`,
-                "app": info.menuItemId,
-                "type": "browser",
-                "url": info.linkUrl
-            }
-            ws_message_send(data);
-            // console.log("to websocket", data);
-            break;
-        case "open-sidebar":
-            // console.log("Opening my sidebar");
-            break;
-        case "tools-menu":
-            // console.log("Clicked the tools menu item");
-            break;
-    }
-});
+    browser.menus.onClicked.addListener((info, tab) => {
+        debug("info", info);
+        let data = null
+        const dt = new Date();
+        const padL = (nr, len = 2, chr = `0`) => `${nr}`.padStart(2, chr);
+        debug(`${dt.getFullYear()} ${padL(dt.getMonth() + 1)}/${padL(dt.getDate())}/${padL(dt.getHours())}:${padL(dt.getMinutes())}:${padL(dt.getSeconds())}`);
+        switch (info.menuItemId) {
+            case "check-uncheck":
+                menu_check_uncheck_update(info.checked);
+                break;
+            case "browser-firefox":
+            case "browser-firefox-incognito":
+            case "browser-chrome":
+            case "browser-chrome-incognito":
+            case "browser-edge":
+            case "browser-edge-incognito":
+                data = {
+                    "date": `${dt.getFullYear()}-${padL(dt.getMonth() + 1)}-${padL(dt.getDate())} ${padL(dt.getHours())}:${padL(dt.getMinutes())}:${padL(dt.getSeconds())}`,
+                    "app": info.menuItemId,
+                    "type": "browser",
+                    "url": info.linkUrl
+                }
+                ws_message_send(data);
+                debug("to websocket", data);
+                break;
+            case "open-sidebar":
+                debug("Opening my sidebar");
+                break;
+            case "tools-menu":
+                debug("Clicked the tools menu item");
+                break;
+        }
+    });
+}
+
+main();

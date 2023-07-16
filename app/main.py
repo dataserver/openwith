@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import sys
 import threading
 import tkinter as tk
@@ -68,15 +69,26 @@ class WebSocketThread:
 
         if is_json(data):
             json_data = json.loads(data)
-            if json_data["data"]["category"] == "cat-a":
+            if json_data["data"]["type"] == "browser":
                 url = json_data["data"]["url"]
-                if json_data["data"]["action"] == "action-a":
-                    action = "some action A"
-                elif json_data["data"]["action"] == "action-b":
-                    action = "some action B"
+                if json_data["data"]["app"] == "browser-chrome":
+                    cmd = "start chrome --new-window {}".format(url)
+                elif json_data["data"]["app"] == "browser-chrome-incognito":
+                    cmd = "start chrome --incognito {}".format(url)
+                elif json_data["data"]["app"] == "browser-firefox":
+                    cmd = "start firefox --new-window {}".format(url)
+                elif json_data["data"]["app"] == "browser-firefox-incognito":
+                    cmd = "start firefox --private-window {}".format(url)
+                elif json_data["data"]["app"] == "browser-edge":
+                    cmd = "start msedge --new-window {}".format(url)
+                elif json_data["data"]["app"] == "browser-edge-incognito":
+                    cmd = "start msedge --inprivate {}".format(url)
                 else:
-                    action = None
-                app.append_text(f"{ts} - {action}")
+                    cmd = None
+
+                if cmd:
+                    app.append_text(f"{ts} - {cmd}")
+                    os.system(cmd)
 
             elif json_data["data"]["category"] == "cat-a":
                 pass
