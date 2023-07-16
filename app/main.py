@@ -87,11 +87,12 @@ class WebSocketThread:
                     cmd = None
 
                 if cmd:
-                    app.append_text(f"{ts} - {cmd}")
+                    app.append_text(f"{ts} - exceuted: {cmd}")
                     os.system(cmd)
 
-            elif json_data["data"]["category"] == "cat-a":
-                pass
+            elif json_data["data"]["type"] == "echo":
+                app.append_text(f"{ts} - echo: {data}")
+                websocket.send(data)
             else:
                 pass
         else:
@@ -103,7 +104,7 @@ class App(tk.Tk):
         super().__init__(*args, **kwargs)
 
         self.title("Open With")
-        self.geometry("300x200")
+        self.geometry("500x600")
         # self.resizable(False, False)
         self.protocol("WM_DELETE_WINDOW", self.on_window_delete)
 

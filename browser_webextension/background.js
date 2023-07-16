@@ -40,17 +40,17 @@ function get_user_agent() {
  */
 function ws_conn_init() {
     if (socket_conn === null) {
-        debug("ws: init");
+        debug("ws init");
         socket_conn = new WebSocket(WS_SERVER_URL);
         socket_conn.addEventListener("open", function (event) {
-            debug("ws: opened");
-            socket_conn.send("browser: init hello");
+            debug("ws opened");
+            socket_conn.send("hello!");
         });
         socket_conn.addEventListener("message", function (event) {
-            debug("ws message:", event.data);
+            debug("server:", event.data);
         });
         socket_conn.addEventListener("close", function (event) {
-            debug("ws: closed");
+            debug("ws closed");
             menu_check_uncheck_update(false);
             submenu_remove();
             socket_conn = null;
