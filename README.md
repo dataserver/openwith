@@ -5,8 +5,8 @@ A simple web extension that create new context menu option to open links with an
 Firefox, Chrome or Edge installed in your Windows computer.
 
 
-The extensino send the url info using a websocket connection to an app runnig in your local machine
-(ws://localhost:9090) that then open it using one of following browsers:
+The extension send a message via websocket with url and browser info to socket server runnig in your local machine
+(ws://localhost:9090). Then pytthon open it using one of following browsers:
 
 - Firefox
 - Firefox - Private mode
@@ -24,6 +24,7 @@ There are two example of websocket server using different GUI libraries:
 ## Only for Windows
 
 In the server side only windows command lines are coded.
+
 
 ## HOW TO USE
 
