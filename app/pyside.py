@@ -129,7 +129,7 @@ class MyServer(QtCore.QObject):
         Initializes websocket server
         """
         super().__init__(parent)
-        self.clients = []
+        self.clients = set()
         self.server = QtWebSockets.QWebSocketServer(server_name, secure_mode, parent)
         self.server.closed.connect(QtCore.QCoreApplication.quit)
         if self.server.listen(WS_HOST, WS_PORT):
@@ -157,7 +157,7 @@ class MyServer(QtCore.QObject):
         client.textMessageReceived.connect(self.handler_str_message)
         client.binaryMessageReceived.connect(self.handler_binary_message)
         client.disconnected.connect(self.on_disconnected)
-        self.clients.append(client)
+        self.clients.add(client)
         self.signal_status_changed.emit(f"{ts} - connected: client-{client.identifier}")
 
     @QtCore.Slot(str)
