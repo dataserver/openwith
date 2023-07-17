@@ -92,7 +92,7 @@ class WebSocketThread:
 
             elif json_data["data"]["type"] == "echo":
                 app.append_text(f"{ts} - echo: {data}")
-                websocket.send(data)
+                await websocket.send(data)
             else:
                 pass
         else:
