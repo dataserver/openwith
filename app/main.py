@@ -26,7 +26,7 @@ def is_json(myjson) -> bool:
 class WebSocketThread:
     def __init__(self, name) -> None:
         self.name = name
-        self.USERS = set()
+        self.clients = set()
         print("Started:", self.name)
 
     def start(self):
@@ -42,7 +42,7 @@ class WebSocketThread:
         loop.close()
 
     async def listen(self, websocket) -> None:
-        self.USERS.add(websocket)
+        self.clients.add(websocket)
         # this loop to get message from client #
         while True:
             try:
@@ -58,7 +58,7 @@ class WebSocketThread:
                     print(f"close: {ts}", websocket)
                 break
 
-        self.USERS.remove(websocket)
+        self.clients.remove(websocket)
 
     # message handler
     async def handle_message(self, websocket, data) -> None:
