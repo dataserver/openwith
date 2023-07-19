@@ -16,7 +16,7 @@ The extension send a message via websocket with url and browser info to socket s
 - Microsoft Edge - InPrivate mode
 
 ## GUI PySide6
-GUI is written in PySide (PyQT)
+GUI uses PySide6
 
     python app/main.py
 
