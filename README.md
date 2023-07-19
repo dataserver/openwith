@@ -15,16 +15,14 @@ The extension send a message via websocket with url and browser info to socket s
 - Microsoft Edge
 - Microsoft Edge - InPrivate mode
 
-## TKinter & PySide6
+## GUI PySide6
+GUI is written in PySide (PyQT)
 
-There are two example of websocket server using different GUI libraries:
-- main.py (Tkinter)
-- pyside.py (PySide6)
+    python app/main.py
 
 ## Only for Windows
 
 In the server side only windows command lines are coded.
-
 
 ## HOW TO USE
 
@@ -36,8 +34,6 @@ In the server side only windows command lines are coded.
 The websocket server written in Python and can easily be converted to executable using Pyinstaller
     
     pyinstaller main.spec
-    or
-    pyinstaller pyside.spec
 
 ## License ##
 

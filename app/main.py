@@ -1,16 +1,28 @@
-#  https://github.com/vuquangtrong/demo_websocket_server_tkinter_gui
-
-import asyncio
+# https://stackoverflow.com/questions/59157478/how-to-pass-data-between-main-widget-and-qobject-that-are-in-different-classes
 import json
 import os
 import sys
-import threading
-import tkinter as tk
 from datetime import datetime
+from typing import Optional
 
-import websockets
+from PySide6 import QtCore, QtNetwork, QtWebSockets
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QScreen
+from PySide6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QSizePolicy,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-WS_HOST = "localhost"
+WS_HOST = QtNetwork.QHostAddress.LocalHost
 WS_PORT = 9090
 DEBUG = False
 
@@ -23,116 +35,213 @@ def is_json(myjson) -> bool:
     return True
 
 
-class WebSocketThread:
-    def __init__(self, name) -> None:
-        self.name = name
+class QHSeperationLine(QFrame):
+    """
+    a horizontal seperation line
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setMinimumWidth(1)
+        self.setFixedHeight(20)
+        self.setFrameShape(QFrame.HLine)
+        self.setFrameShadow(QFrame.Sunken)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+
+
+class Window(QMainWindow):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle("Websocket Server")
+        self.resize(500, 600)
+
+        primary = QWidget()
+        frame = QVBoxLayout()
+        lyt_head = QHBoxLayout()
+        lyt_body = QGridLayout()
+        lyt_footer = QGridLayout()
+
+        # head widgets
+        label_heading = QLabel(text="Log")
+        label_heading.setAlignment(Qt.AlignCenter)
+        lyt_head.addWidget(label_heading)
+
+        # body
+        self.textarea_log = QTextEdit()
+        lyt_body.addWidget(self.textarea_log)
+
+        # footer widgets
+        btn_quit = QPushButton(text="Quit")
+        btn_quit.setProperty("class", "warning")
+        btn_quit.clicked.connect(self.app_quit)  # type: ignore
+        lyt_footer.addWidget(btn_quit, 0, 0)
+
+        frame.addLayout(lyt_head)
+        frame.addLayout(lyt_body)
+        frame.addWidget(QHSeperationLine())
+        frame.addLayout(lyt_footer)
+
+        primary.setLayout(frame)
+        self.setCentralWidget(primary)
+        self.show()
+        self.window_to_center()
+
+    @QtCore.Slot(str)
+    def on_status_changed(self, message: str) -> None:
+        """
+        Append message to QTextEdit (textarea) widget
+        """
+        self.textarea_log.append(message)
+
+    def window_to_center(self) -> None:
+        """
+        Center window to the middle o screen
+        """
+        center = QScreen.availableGeometry(QApplication.primaryScreen()).center()
+        geo = self.frameGeometry()
+        geo.moveCenter(center)
+        self.move(geo.topLeft())
+
+    def app_quit(self) -> None:
+        """
+        Quit window GUI
+        """
+        app.quit()
+
+
+class MyServer(QtCore.QObject):
+    """Websocket Server class.
+
+    Attributes:
+        signal_status_changed: A signal to connect to other classes.
+        server: ws instance
+    """
+
+    signal_status_changed = QtCore.Signal(str)
+
+    def __init__(
+        self,
+        server_name: str,
+        secure_mode: QtWebSockets.QWebSocketServer.SslMode,
+        parent: Optional[QtCore.QObject] = None,
+    ):
+        """
+        Initializes websocket server
+        """
+        super().__init__(parent)
         self.clients = set()
-        print("Started:", self.name)
-
-    def start(self):
-        server = threading.Thread(target=self.server, daemon=True)
-        server.start()
-
-    def server(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        ws_server = websockets.serve(self.listen, WS_HOST, WS_PORT)  # type: ignore
-        loop.run_until_complete(ws_server)
-        loop.run_forever()
-        loop.close()
-
-    async def listen(self, websocket) -> None:
-        self.clients.add(websocket)
-        # this loop to get message from client #
-        while True:
-            try:
-                msg = await websocket.recv()
-                if msg is None:
-                    break
-                await self.handle_message(websocket, msg)
-
-            except websockets.exceptions.ConnectionClosed:  # type: ignore
-                ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
-                app.append_text(f"{ts} - closed - {websocket}")
-                if DEBUG:
-                    print(f"close: {ts}", websocket)
-                break
-
-        self.clients.remove(websocket)
-
-    # message handler
-    async def handle_message(self, websocket, data) -> None:
-        ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
-        if DEBUG:
-            print(f"websocket: {websocket}")
-            print(f"data: {data}")
-
-        if is_json(data):
-            json_data = json.loads(data)
-            if json_data["data"]["type"] == "browser":
-                url = json_data["data"]["url"]
-                if json_data["data"]["app"] == "browser-chrome":
-                    cmd = "start chrome --new-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-chrome-incognito":
-                    cmd = "start chrome --incognito {}".format(url)
-                elif json_data["data"]["app"] == "browser-firefox":
-                    cmd = "start firefox --new-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-firefox-incognito":
-                    cmd = "start firefox --private-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-edge":
-                    cmd = "start msedge --new-window {}".format(url)
-                elif json_data["data"]["app"] == "browser-edge-incognito":
-                    cmd = "start msedge --inprivate {}".format(url)
-                else:
-                    cmd = None
-
-                if cmd:
-                    app.append_text(f"{ts} - exceuted: {cmd}")
-                    os.system(cmd)
-
-            elif json_data["data"]["type"] == "echo":
-                app.append_text(f"{ts} - echo: {data}")
-                await websocket.send(data)
-            else:
-                pass
+        self.server = QtWebSockets.QWebSocketServer(server_name, secure_mode, parent)
+        self.server.closed.connect(QtCore.QCoreApplication.quit)
+        if self.server.listen(WS_HOST, WS_PORT):
+            print(
+                "Connected: "
+                + self.server.serverName()
+                + " : "
+                + self.server.serverAddress().toString()
+                + ":"
+                + str(self.server.serverPort())
+            )
         else:
-            app.append_text(f"{ts} - {data}")
+            print(f"error: {self.server.errorString()}")
+        self.server.newConnection.connect(self.on_new_connection)
+        print("isListening: ", self.server.isListening())
 
+    @QtCore.Slot()
+    def on_new_connection(self):
+        """
+        callback on websocket connection
+        """
+        ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+        client = self.server.nextPendingConnection()
+        client.identifier = QtCore.QUuid.createUuid().toString(QtCore.QUuid.Id128)
+        client.textMessageReceived.connect(self.handler_str_message)
+        client.binaryMessageReceived.connect(self.handler_binary_message)
+        client.disconnected.connect(self.on_disconnected)
+        self.clients.add(client)
+        self.signal_status_changed.emit(f"{ts} - connected: client-{client.identifier}")
 
-class App(tk.Tk):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    @QtCore.Slot(str)
+    def handler_str_message(self, message):
+        """
+        callback for each websocket str message received
+        """
+        ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+        client = self.sender()
+        if DEBUG:
+            print(f"client.identifier: {client.identifier}")
+            print(f"message: {message}")
+        if isinstance(client, QtWebSockets.QWebSocket):
+            # client.sendTextMessage(message)
+            if is_json(message):
+                json_data = json.loads(message)
+                if json_data["data"]["type"] == "browser":
+                    url = json_data["data"]["url"]
+                    if json_data["data"]["app"] == "browser-chrome":
+                        cmd = "start chrome --new-window {}".format(url)
+                    elif json_data["data"]["app"] == "browser-chrome-incognito":
+                        cmd = "start chrome --incognito {}".format(url)
+                    elif json_data["data"]["app"] == "browser-firefox":
+                        cmd = "start firefox --new-window {}".format(url)
+                    elif json_data["data"]["app"] == "browser-firefox-incognito":
+                        cmd = "start firefox --private-window {}".format(url)
+                    elif json_data["data"]["app"] == "browser-edge":
+                        cmd = "start msedge --new-window {}".format(url)
+                    elif json_data["data"]["app"] == "browser-edge-incognito":
+                        cmd = "start msedge --inprivate {}".format(url)
+                    else:
+                        cmd = None
 
-        self.title("Open With")
-        self.geometry("500x600")
-        # self.resizable(False, False)
-        self.protocol("WM_DELETE_WINDOW", self.on_window_delete)
+                    if cmd:
+                        self.signal_status_changed.emit(f"{ts} - executed: {cmd}")
+                        os.system(cmd)
 
-        self.label = tk.Label(self, text="Log")
-        self.label.pack()
+                elif json_data["data"]["type"] == "echo":
+                    client.sendTextMessage(message)
+                    self.signal_status_changed.emit(
+                        f"{ts} - echo to client-{client.identifier}: {message}"
+                    )
+                else:
+                    pass
+            else:
+                self.signal_status_changed.emit(
+                    f"{ts} - client-{client.identifier} str: {message}"
+                )
 
-        self.textbox = tk.Text(self, height=5)
-        self.textbox.pack(expand=tk.YES, fill=tk.BOTH)
+    @QtCore.Slot(QtCore.QByteArray)
+    def handler_binary_message(self, message):
+        """
+        callback for each websocket binary message received
+        """
+        ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+        client = self.sender()
+        if DEBUG:
+            print(f"client.identifier: {client.identifier}")
+            print(f"message: {message}")
+        if isinstance(client, QtWebSockets.QWebSocket):
+            # client.sendBinaryMessage(message)
+            print(f"{ts} - client-{client.identifier} binary: {message}")
 
-        self.btn_stop = tk.Button(self, text="Close", command=self.close_window)
-        self.btn_stop.pack(padx=10, pady=3, anchor="e")
-
-    def append_text(self, txt) -> None:
-        self.textbox.insert(tk.END, "\n" + txt)
-
-    def on_window_delete(self) -> None:
-        app.append_text("Terminate")
-        self.destroy()
-        sys.exit()
-
-    def close_window(self) -> None:
-        app.append_text("Terminate")
-        self.destroy()
-        sys.exit()
+    @QtCore.Slot()
+    def on_disconnected(self):
+        """
+        callback for each websocket disconnection
+        """
+        ts = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+        client = self.sender()
+        if isinstance(client, QtWebSockets.QWebSocket):
+            self.clients.remove(client)
+            self.signal_status_changed.emit(
+                f"{ts} - Disconnected: client-{client.identifier}"
+            )
+            client.deleteLater()
 
 
 if __name__ == "__main__":
-    threadWebSocket = WebSocketThread("websocket_server")
-    threadWebSocket.start()
-    app = App()
-    app.mainloop()
+    app = QApplication(sys.argv)
+    gui = Window()
+    server = MyServer(
+        "My Websocket Server",
+        QtWebSockets.QWebSocketServer.NonSecureMode,
+    )
+    server.signal_status_changed.connect(gui.on_status_changed)
+    sys.exit(app.exec())
