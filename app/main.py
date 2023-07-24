@@ -3,11 +3,12 @@ import json
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from PySide6 import QtCore, QtNetwork, QtWebSockets
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QScreen
+from PySide6.QtGui import QIcon, QScreen
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -22,6 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+BASE_PATH = Path(__file__).parent
+ICON_PATH = Path(BASE_PATH, "resources", "window.ico")
 WS_HOST = QtNetwork.QHostAddress.LocalHost
 WS_PORT = 9090
 DEBUG = False
@@ -53,6 +56,7 @@ class Window(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Websocket Server")
+        self.setWindowIcon(QIcon(str(ICON_PATH)))
         self.resize(500, 600)
 
         primary = QWidget()
