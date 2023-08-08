@@ -5,9 +5,10 @@ const USER_AGENT = get_user_agent();
 const WS_SERVER_URL = "ws://localhost:9090";
 const IS_DEBUG = false;
 
+// =============================================================================
 var socket_conn = null;
 var debug = IS_DEBUG ? console.log.bind(window.console) : function () { };
-// =============================================================================
+
 /**
  * Return browser user agent
  */
@@ -154,11 +155,23 @@ function submenu_remove() {
  * Create submenu options from context menu
  */
 function submenu_create() {
+    if (IS_DEBUG) {
+        browser.menus.create({
+            id: "item-test",
+            title: "TEST menu",
+            contexts: ["link", "page"],
+            documentUrlPatterns: PATTERN_VALID_URLS,
+            icons: {
+                "16": "icons/mozilla_firefox.svg",
+                "32": "icons/mozilla_firefox.svg"
+            }
+        }, menu_on_created);
+    }
     if (USER_AGENT != "firefox") {
         browser.menus.create({
             id: "browser-firefox",
             title: "Mozilla Firefox",
-            contexts: ["link"],
+            contexts: ["link", "page"],
             documentUrlPatterns: PATTERN_VALID_URLS,
             icons: {
                 "16": "icons/mozilla_firefox.svg",
@@ -168,7 +181,7 @@ function submenu_create() {
         browser.menus.create({
             id: "browser-firefox-incognito",
             title: "Mozilla Firefox Private",
-            contexts: ["link"],
+            contexts: ["link", "page"],
             documentUrlPatterns: PATTERN_VALID_URLS,
             icons: {
                 "16": "icons/mozilla_firefox_private.svg",
@@ -187,7 +200,7 @@ function submenu_create() {
         browser.menus.create({
             id: "browser-chrome",
             title: "Google Chrome",
-            contexts: ["link"],
+            contexts: ["link", "page"],
             documentUrlPatterns: PATTERN_VALID_URLS,
             icons: {
                 "16": "icons/google_chrome.svg",
@@ -197,7 +210,7 @@ function submenu_create() {
         browser.menus.create({
             id: "browser-chrome-incognito",
             title: "Google Chrome Incognito",
-            contexts: ["link"],
+            contexts: ["link", "page"],
             documentUrlPatterns: PATTERN_VALID_URLS,
             icons: {
                 "16": "icons/google_chrome_incognito.svg",
@@ -216,7 +229,7 @@ function submenu_create() {
         browser.menus.create({
             id: "browser-edge",
             title: "Microsoft Edge",
-            contexts: ["link"],
+            contexts: ["link", "page"],
             documentUrlPatterns: PATTERN_VALID_URLS,
             icons: {
                 "16": "icons/microsoft_edge.svg",
@@ -226,7 +239,7 @@ function submenu_create() {
         browser.menus.create({
             id: "browser-edge-incognito",
             title: "Microsoft Edge InPrivate",
-            contexts: ["link"],
+            contexts: ["link", "page"],
             documentUrlPatterns: PATTERN_VALID_URLS,
             icons: {
                 "16": "icons/microsoft_edge_incognito.svg",
@@ -271,11 +284,12 @@ function main() {
             case "browser-chrome-incognito":
             case "browser-edge":
             case "browser-edge-incognito":
+                let url = ("linkUrl" in info) ? info.linkUrl : info.pageUrl;
                 data = {
                     "date": `${dt.getFullYear()}-${padL(dt.getMonth() + 1)}-${padL(dt.getDate())} ${padL(dt.getHours())}:${padL(dt.getMinutes())}:${padL(dt.getSeconds())}`,
                     "app": info.menuItemId,
                     "type": "browser",
-                    "url": info.linkUrl
+                    "url": url
                 }
                 ws_message_send(data);
                 debug("to websocket", data);

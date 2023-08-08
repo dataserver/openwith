@@ -2,7 +2,7 @@
     "name": "Open With (websocket)",
     "description": "Open links with other web browsers. Use websocket connection between browser and websocket server",
     "manifest_version": 2,
-    "version": "1.4",
+    "version": "1.5",
     "browser_specific_settings": {
         "gecko": {
             "id": "openwith@dataserver.github.com",
